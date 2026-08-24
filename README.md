@@ -1,6 +1,65 @@
 # Graphics Settings Migrator
 
-Windows GUI utility for backing up and moving settings between versions or PCs.
+> [!WARNING]
+> **Experimental software — use entirely at your own risk.** This project is
+> provided as-is, without warranties or guarantees of compatibility, completeness,
+> data integrity, or fitness for a particular purpose. The author and contributors
+> accept no responsibility or liability for lost or damaged settings, files,
+> plug-ins, licenses, work time, or any other direct or indirect loss. Keep an
+> independent copy of important data and test the workflow before relying on it.
+
+Graphics Settings Migrator is a portable Windows utility for artists, technical
+artists, freelancers, and studios that need to copy application settings between
+software versions or prepare another workstation with a familiar production setup.
+
+Typical uses include:
+
+- moving an artist from an old PC to a new workstation;
+- preparing multiple studio computers from an approved settings package;
+- carrying hotkeys, workspaces, presets, brushes, scripts, plug-ins, and preferences
+  to a newer application version where the target format remains compatible;
+- keeping updateable, checksum-verified copies of important application setup;
+- removing obsolete settings with a recovery copy and reverting previous restores.
+
+The program discovers known settings locations, lets the user choose individual
+sets, stores them in an ordinary portable folder, and restores them to automatically
+detected or manually edited destinations. It does not upload settings to a service.
+
+[Download the latest portable release](https://github.com/Ezypoly/GraphicsSettingsMigrator/releases/latest)
+
+## Before using it
+
+- Close supported graphics applications before Save, Update, Restore, or Remove.
+- Keep the original application profiles and a separate copy of valuable custom content.
+- Test a saved copy and restore on a disposable profile or non-production workstation first.
+- Review the selected rows, target paths, size, file count, and Preview before confirming.
+- Treat native plug-ins, binary preference files, licensing data, and machine-specific
+  settings as version- and workstation-dependent unless the vendor documents otherwise.
+
+## Typical workflow
+
+1. Open **Save**, scan the workstation, and select the settings sets you need.
+2. Choose a **Save library folder** and create a timestamped portable saved copy.
+3. Move that saved-copy folder to another PC, or keep it for a later software upgrade.
+4. Open **Open / restore**, select the folder containing `manifest.json`, and review
+   the automatically proposed destination for every row.
+5. Use **Preview**, adjust editable target paths if necessary, and restore only the
+   compatible sets you intend to migrate.
+6. If required, use **Rollback** to revert files and registry values changed by a restore.
+
+## Moving to a newer application version
+
+Yes, cross-version migration is supported. For each saved set, Restore looks for
+targets belonging to the same application, settings category, and storage type,
+then normally proposes the newest detected version. The target path is always
+visible and editable before Restore.
+
+This is file and registry migration, not vendor-specific format conversion. A newer
+application may reject, ignore, rewrite, or misinterpret data produced by an older
+version. Presets, scripts, brushes, hotkeys, and text-based configuration are generally
+safer than opaque binary preferences or compiled native plug-ins. Launch the new
+application once so it creates its profile, migrate selectively, use **Preview**, and
+keep the automatic rollback copy until the new setup has been verified.
 
 ## Supported applications (44)
 
