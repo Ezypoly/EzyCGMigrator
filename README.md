@@ -116,8 +116,8 @@ saved copies. A **Saved copy folder** is one specific child folder containing
   checkbox or press Space to toggle all of their checkboxes.
 - **Auto-select folders up to** is saved between runs and defaults to 500 MB.
   Larger folders remain visible but unchecked; set it to `0` for no size limit.
-  **Select / clear all** also respects this limit. The same control appears on
-  **Update saved copy** and applies to existing and New rows.
+  **Select / clear all** also respects this limit. The control lives on the
+  **Settings** tab and applies to Save, Open / restore, and Update saved copy rows.
 - **Select / clear all** selects normal settings but deliberately skips every
   cache-containing set. Cache rows can only be enabled manually.
 - Choosing **Open...** on the Open / restore or Update saved copy tab loads the
@@ -128,7 +128,10 @@ saved copies. A **Saved copy folder** is one specific child folder containing
   survive portable application updates.
 - **Appearance** switches instantly between **Classic dark** (the original dark
   interface) and **Console**; both keep the native Windows frame dark. The choice
-  is remembered between launches and portable updates.
+  is available on **Settings** and is remembered between launches and updates.
+- Every settings table allows column widths to be resized by dragging a header
+  divider. Drag a column header to change its display order; Path and Notes use
+  normal resizable widths instead of locked fill sizing.
 
 ## Removing old settings
 
@@ -143,7 +146,7 @@ caches remain untouched unless their own row is explicitly highlighted.
 ## Updates
 
 Version 1.3.0 and later can update themselves from the repository's latest
-GitHub Release. Use **Check for updates** on the Save tab. The updater:
+GitHub Release. Use **Check for updates** on the **Settings** tab. The updater:
 
 - downloads only `GraphicsSettingsMigrator-win-x64.zip` from this repository;
 - verifies the exact asset size and GitHub-provided SHA-256 digest;

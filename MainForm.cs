@@ -46,6 +46,10 @@ public sealed class MainForm : Form
         AutoSize = true
     };
     private BackupManifest? _loadedManifest;
+    internal event EventHandler? AutoSelectLimitUpdated;
+    internal int AutoSelectFolderLimitMb => _options.AutoSelectFolderLimitMb;
+    internal long AutoSelectFolderLimitBytes => _options.AutoSelectFolderLimitBytes;
+
 
     public MainForm()
     {
@@ -74,6 +78,7 @@ public sealed class MainForm : Form
         ConfigureMultiRowSelection(_restoreGrid);
         _tabs.TabPages.Add(BuildBackupTab());
         _tabs.TabPages.Add(BuildRestoreTab());
+        _tabs.TabPages.Add(BuildSettingsTab());
         Controls.Add(_tabs);
         DarkTheme.Apply(this, _tabs, UseConsoleStyle);
         _scanButton.Click += async (_, _) => await ScanAsync();
@@ -122,21 +127,56 @@ public sealed class MainForm : Form
             Padding = new Padding(0, 7, 0, 0) });
         actions.Controls.Add(_backupDestination);
         actions.Controls.Add(browse);
-        actions.Controls.Add(new Label { Text = "  Auto-select folders up to:", AutoSize = true,
-            Padding = new Padding(8, 7, 0, 0) });
-        actions.Controls.Add(_autoSelectLimit);
-        actions.Controls.Add(new Label { Text = "MB (0 = unlimited)", AutoSize = true, Padding = new Padding(0, 7, 0, 0) });
         actions.Controls.Add(_backupButton);
-        actions.Controls.Add(new Label { Text = "  Appearance:", AutoSize = true,
-            Padding = new Padding(8, 7, 0, 0) });
-        actions.Controls.Add(_appearance);
-        actions.Controls.Add(new Label { Text = "  Version " + UpdateService.CurrentVersionText,
-            AutoSize = true, Padding = new Padding(8, 7, 0, 0) });
-        actions.Controls.Add(_updateButton);
         layout.Controls.Add(intro, 0, 0);
         layout.Controls.Add(actions, 0, 1);
         layout.Controls.Add(_backupGrid, 0, 2);
         layout.Controls.Add(_backupLog, 0, 3);
+        page.Controls.Add(layout);
+        return page;
+    }
+
+    private TabPage BuildSettingsTab()
+    {
+        var page = new TabPage("Settings");
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(18)
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.Controls.Add(new Label
+        {
+            AutoSize = true,
+            MaximumSize = new Size(1120, 0),
+            Text = "Application-wide settings. Changes apply immediately and are remembered between updates."
+        }, 0, 0);
+
+        var settings = new TableLayoutPanel
+        {
+            AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2,
+            Padding = new Padding(0, 16, 0, 0)
+        };
+        settings.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        settings.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        settings.Controls.Add(new Label { Text = "Appearance", AutoSize = true,
+            Padding = new Padding(0, 7, 18, 10) }, 0, 0);
+        settings.Controls.Add(_appearance, 1, 0);
+        settings.Controls.Add(new Label { Text = "Auto-select folders up to", AutoSize = true,
+            Padding = new Padding(0, 7, 18, 10) }, 0, 1);
+        var sizeRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        sizeRow.Controls.Add(_autoSelectLimit);
+        sizeRow.Controls.Add(new Label { Text = "MB (0 = unlimited)", AutoSize = true,
+            Padding = new Padding(0, 7, 0, 0) });
+        settings.Controls.Add(sizeRow, 1, 1);
+        settings.Controls.Add(new Label { Text = "Application updates", AutoSize = true,
+            Padding = new Padding(0, 7, 18, 0) }, 0, 2);
+        var updateRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
+        updateRow.Controls.Add(new Label { Text = "Version " + UpdateService.CurrentVersionText,
+            AutoSize = true, Padding = new Padding(0, 7, 8, 0) });
+        updateRow.Controls.Add(_updateButton);
+        settings.Controls.Add(updateRow, 1, 2);
+        layout.Controls.Add(settings, 0, 1);
         page.Controls.Add(layout);
         return page;
     }
@@ -206,8 +246,8 @@ public sealed class MainForm : Form
         _backupGrid.Columns.Add(TextColumn("Files", "Files", 60, true));
         _backupGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            Name = "Path", HeaderText = "Path", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-            MinimumWidth = 260, ReadOnly = true
+            Name = "Path", HeaderText = "Path", Width = 420, MinimumWidth = 80,
+            ReadOnly = true, Resizable = DataGridViewTriState.True
         });
         _backupGrid.Columns.Add(TextColumn("Notes", "Notes", 250, true));
     }
@@ -222,13 +262,14 @@ public sealed class MainForm : Form
         _restoreGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
             Name = "TargetPath", HeaderText = "Target path (editable)",
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, MinimumWidth = 350
+            Width = 450, MinimumWidth = 80, Resizable = DataGridViewTriState.True
         });
         _restoreGrid.Columns.Add(TextColumn("TargetStatus", "Target", 90, true));
     }
 
     private static DataGridViewTextBoxColumn TextColumn(string name, string header, int width, bool readOnly) =>
-        new() { Name = name, HeaderText = header, Width = width, ReadOnly = readOnly };
+        new() { Name = name, HeaderText = header, Width = width, ReadOnly = readOnly,
+            Resizable = DataGridViewTriState.True, SortMode = DataGridViewColumnSortMode.NotSortable };
 
     private async Task ScanAsync()
     {
@@ -692,6 +733,7 @@ public sealed class MainForm : Form
         }
         _backupGrid.Invalidate();
         _restoreGrid.Invalidate();
+        AutoSelectLimitUpdated?.Invoke(this, EventArgs.Empty);
     }
 
     private bool ShouldAutoSelect(SettingsLocation location) =>
@@ -752,7 +794,8 @@ public sealed class MainForm : Form
     private static DataGridView CreateGrid() => new()
     {
         Dock = DockStyle.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false,
-        AllowUserToResizeRows = false, RowHeadersVisible = false,
+        AllowUserToResizeRows = false, AllowUserToResizeColumns = true,
+        AllowUserToOrderColumns = true, RowHeadersVisible = false,
         SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = true,
         AutoGenerateColumns = false, BackgroundColor = SystemColors.Window,
         BorderStyle = BorderStyle.Fixed3D, AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None

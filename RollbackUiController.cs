@@ -40,7 +40,11 @@ internal sealed class RollbackUiController
         _form = form;
         var tabs = Descendants<TabControl>(form).FirstOrDefault();
         if (tabs == null) return;
-        tabs.TabPages.Add(BuildTab());
+        var page = BuildTab();
+        var settingsIndex = tabs.TabPages.Cast<TabPage>().ToList()
+            .FindIndex(candidate => candidate.Text.Equals("Settings", StringComparison.OrdinalIgnoreCase));
+        if (settingsIndex >= 0) tabs.TabPages.Insert(settingsIndex, page);
+        else tabs.TabPages.Add(page);
         _refresh.Click += (_, _) => RefreshList();
         _open.Click += (_, _) => OpenSelected();
         _revert.Click += async (_, _) => await RevertSelectedAsync();

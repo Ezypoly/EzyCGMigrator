@@ -27,7 +27,6 @@ internal sealed class BackupUpdateUiController
     private readonly DiscoveryService _discovery = new();
     private readonly RestoreService _restoreService = new();
     private readonly BackupUpdateService _updateService = new();
-    private readonly UserOptions _options = UserOptions.Load();
     private readonly UserPreferencesStore _preferencesStore = new();
     private readonly TextBox _path = new() { Width = 470 };
     private readonly TextBox _log = new()
@@ -38,7 +37,8 @@ internal sealed class BackupUpdateUiController
     private readonly DataGridView _grid = new()
     {
         Dock = DockStyle.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false,
-        AllowUserToResizeRows = false, RowHeadersVisible = false,
+        AllowUserToResizeRows = false, AllowUserToResizeColumns = true,
+        AllowUserToOrderColumns = true, RowHeadersVisible = false,
         SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = true,
         AutoGenerateColumns = false, BorderStyle = BorderStyle.Fixed3D
     };
@@ -46,14 +46,6 @@ internal sealed class BackupUpdateUiController
     private readonly Button _load = new() { Text = "Open", AutoSize = true };
     private readonly Button _toggle = new() { Text = "Select / clear all", AutoSize = true };
     private readonly Button _update = new() { Text = "Update selected", AutoSize = true };
-    private readonly NumericUpDown _autoSelectLimit = new()
-    {
-        Minimum = 0,
-        Maximum = UserOptions.MaximumAutoSelectFolderLimitMb,
-        Increment = 100,
-        ThousandsSeparator = true,
-        Width = 90
-    };
     private BackupManifest? _manifest;
     private TabControl? _tabs;
 
@@ -62,7 +54,6 @@ internal sealed class BackupUpdateUiController
         _form = form;
         _path.Text = _preferencesStore.Load().UpdateBackupPath;
         _path.PlaceholderText = "One saved-copy folder containing manifest.json";
-        _autoSelectLimit.Value = _options.AutoSelectFolderLimitMb;
         _tabs = Descendants<TabControl>(form).FirstOrDefault();
         if (_tabs == null) return;
         ConfigureGrid();
@@ -76,7 +67,7 @@ internal sealed class BackupUpdateUiController
         _toggle.Click += (_, _) => ToggleAll();
         _update.Click += async (_, _) => await UpdateAsync();
         _path.TextChanged += (_, _) => SaveUpdatePath();
-        _autoSelectLimit.ValueChanged += (_, _) => AutoSelectLimitChanged();
+        _form.AutoSelectLimitUpdated += (_, _) => RefreshAutoSelections();
     }
 
     private TabPage BuildTab()
@@ -109,11 +100,6 @@ internal sealed class BackupUpdateUiController
         actions.Controls.Add(_browse);
         actions.Controls.Add(_load);
         actions.Controls.Add(_toggle);
-        actions.Controls.Add(new Label { Text = "  Auto-select folders up to:", AutoSize = true,
-            Padding = new Padding(8, 7, 0, 0) });
-        actions.Controls.Add(_autoSelectLimit);
-        actions.Controls.Add(new Label { Text = "MB (0 = unlimited)", AutoSize = true,
-            Padding = new Padding(0, 7, 0, 0) });
         actions.Controls.Add(_update);
         layout.Controls.Add(actions, 0, 1);
         layout.Controls.Add(_grid, 0, 2);
@@ -134,13 +120,14 @@ internal sealed class BackupUpdateUiController
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             Name = "Path", HeaderText = "Path", ReadOnly = true,
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, MinimumWidth = 260
+            Width = 420, MinimumWidth = 80, Resizable = DataGridViewTriState.True
         });
         ConfigureMultiRowSelection();
     }
 
     private static DataGridViewTextBoxColumn TextColumn(string name, string header, int width) =>
-        new() { Name = name, HeaderText = header, Width = width, ReadOnly = true };
+        new() { Name = name, HeaderText = header, Width = width, ReadOnly = true,
+            Resizable = DataGridViewTriState.True, SortMode = DataGridViewColumnSortMode.NotSortable };
 
     private async Task BrowseAsync()
     {
@@ -187,7 +174,7 @@ internal sealed class BackupUpdateUiController
             var newSets = items.Count(item => item.Source != null && item.ExistingEntry == null);
             Log("Saved contents: " + _manifest.Entries.Count + ". Available to refresh: " + available +
                 ". New settings sets found: " + newSets + ".");
-            Log("Cache and folders above " + _options.AutoSelectFolderLimitMb +
+            Log("Cache and folders above " + _form.AutoSelectFolderLimitMb +
                 " MB require manual selection (0 means unlimited).");
         }
         catch (Exception ex)
@@ -215,12 +202,12 @@ internal sealed class BackupUpdateUiController
             : (source?.FileCount ?? entry!.FileCount).ToString("N0", CultureInfo.CurrentCulture);
         var status = source == null ? "Not found — kept" : entry == null ? "New — add" : "Saved";
         var rowIndex = _grid.Rows.Add(selected,
+            status,
             source?.Product ?? entry!.Product,
             source?.Version ?? entry!.SourceVersion,
             source?.Category ?? entry!.Category,
             FormatBytes(size), files,
-            source?.SourcePath ?? entry!.OriginalPath,
-            status);
+            source?.SourcePath ?? entry!.OriginalPath);
         var row = _grid.Rows[rowIndex];
         row.Tag = item;
         if (source == null)
@@ -343,12 +330,12 @@ internal sealed class BackupUpdateUiController
     {
         if (row.Cells["Selected"].ReadOnly || row.Tag is not BackupUpdateItem { Source: { } source }) return false;
         return !IsCache(source.Category, source.Notes) &&
-               !(source.Kind == SourceKind.Directory && source.SizeBytes > _options.AutoSelectFolderLimitBytes);
+               !(source.Kind == SourceKind.Directory && source.SizeBytes > _form.AutoSelectFolderLimitBytes);
     }
 
     private bool ShouldAutoSelect(SettingsLocation source) => source.Recommended &&
         !IsCache(source.Category, source.Notes) &&
-        !(source.Kind == SourceKind.Directory && source.SizeBytes > _options.AutoSelectFolderLimitBytes);
+        !(source.Kind == SourceKind.Directory && source.SizeBytes > _form.AutoSelectFolderLimitBytes);
 
     private void ConfigureMultiRowSelection()
     {
@@ -400,12 +387,8 @@ internal sealed class BackupUpdateUiController
         };
     }
 
-    private void AutoSelectLimitChanged()
+    private void RefreshAutoSelections()
     {
-        _options.AutoSelectFolderLimitMb = (int)_autoSelectLimit.Value;
-        try { _options.Save(); }
-        catch (Exception ex) { Log("Could not save the auto-selection limit: " + ex.Message); }
-
         foreach (DataGridViewRow row in _grid.Rows)
         {
             if (row.Tag is not BackupUpdateItem { Source: { } source }) continue;
@@ -415,7 +398,7 @@ internal sealed class BackupUpdateUiController
                 : Color.FromArgb(165, 168, 175);
         }
         _grid.Invalidate();
-        Log("Folder auto-selection limit: " + _options.AutoSelectFolderLimitMb +
+        Log("Folder auto-selection limit: " + _form.AutoSelectFolderLimitMb +
             " MB (0 means unlimited). New and existing rows were refreshed.");
     }
 
@@ -433,7 +416,6 @@ internal sealed class BackupUpdateUiController
         _load.Enabled = !busy;
         _toggle.Enabled = !busy;
         _update.Enabled = !busy;
-        _autoSelectLimit.Enabled = !busy;
     }
 
     private void Log(string message) =>
