@@ -68,6 +68,10 @@ internal sealed class BackupUpdateUiController
         _update.Click += async (_, _) => await UpdateAsync();
         _path.TextChanged += (_, _) => SaveUpdatePath();
         _form.AutoSelectLimitUpdated += (_, _) => RefreshAutoSelections();
+        _form.DiscoveryOptionsUpdated += async (_, _) =>
+        {
+            if (_manifest != null) await LoadAsync();
+        };
     }
 
     private TabPage BuildTab()
@@ -174,7 +178,7 @@ internal sealed class BackupUpdateUiController
             var newSets = items.Count(item => item.Source != null && item.ExistingEntry == null);
             Log("Saved contents: " + _manifest.Entries.Count + ". Available to refresh: " + available +
                 ". New settings sets found: " + newSets + ".");
-            Log("Cache and folders above " + _form.AutoSelectFolderLimitMb +
+            Log("Cache, unclassified data, and folders above " + _form.AutoSelectFolderLimitMb +
                 " MB require manual selection (0 means unlimited).");
         }
         catch (Exception ex)
@@ -329,11 +333,13 @@ internal sealed class BackupUpdateUiController
     private bool IsAutomaticallySelectable(DataGridViewRow row)
     {
         if (row.Cells["Selected"].ReadOnly || row.Tag is not BackupUpdateItem { Source: { } source }) return false;
-        return !IsCache(source.Category, source.Notes) &&
+        return !UnclassifiedDiscovery.IsCategory(source.Category) &&
+               !IsCache(source.Category, source.Notes) &&
                !(source.Kind == SourceKind.Directory && source.SizeBytes > _form.AutoSelectFolderLimitBytes);
     }
 
     private bool ShouldAutoSelect(SettingsLocation source) => source.Recommended &&
+        !UnclassifiedDiscovery.IsCategory(source.Category) &&
         !IsCache(source.Category, source.Notes) &&
         !(source.Kind == SourceKind.Directory && source.SizeBytes > _form.AutoSelectFolderLimitBytes);
 

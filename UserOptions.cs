@@ -9,6 +9,7 @@ internal sealed class UserOptions
     public const int MaximumAutoSelectFolderLimitMb = 1_000_000;
 
     public int AutoSelectFolderLimitMb { get; set; } = DefaultAutoSelectFolderLimitMb;
+    public bool IncludeUnclassifiedProfileData { get; set; }
 
     [JsonIgnore]
     public long AutoSelectFolderLimitBytes => AutoSelectFolderLimitMb <= 0

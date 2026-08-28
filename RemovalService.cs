@@ -21,7 +21,7 @@ internal sealed class RemovalService
 
         var recoveryRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "GraphicsSettingsMigrator Removed Settings");
+            "EzyCGMigrator Removed Settings");
         progress?.Report("Creating a recovery copy before removal...");
         var packageRoot = await _backupService.CreateBackupAsync(
             locations, recoveryRoot, progress, cancellationToken);

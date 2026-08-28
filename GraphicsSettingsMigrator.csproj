@@ -5,11 +5,14 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>GraphicsSettingsMigrator</AssemblyName>
+    <AssemblyName>EzyCGMigrator</AssemblyName>
     <RootNamespace>GraphicsSettingsMigrator</RootNamespace>
+    <Product>Ezy CG Migrator</Product>
+    <Title>Ezy CG Migrator</Title>
+    <Description>Portable Windows settings migration utility for CG artists and studios.</Description>
     <ApplicationIcon />
-    <Version>1.7.2</Version>
-    <AssemblyVersion>1.7.2.0</AssemblyVersion>
-    <FileVersion>1.7.2.0</FileVersion>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
   </PropertyGroup>
 </Project>
