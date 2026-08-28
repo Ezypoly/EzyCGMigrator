@@ -8,7 +8,7 @@ public sealed class RollbackService
 {
     public static string RollbackRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "GraphicsSettingsMigrator Rollbacks");
+        "EzyCGMigrator Rollbacks");
 
     public IReadOnlyList<RollbackPackage> Discover()
     {

@@ -27,13 +27,13 @@ internal sealed class UpdateCheckResult
 
 internal static class UpdateService
 {
-    private const string Repository = "Ezypoly/GraphicsSettingsMigrator";
-    private const string AssetName = "GraphicsSettingsMigrator-win-x64.zip";
-    private const string ExecutableName = "GraphicsSettingsMigrator.exe";
+    private const string Repository = "Ezypoly/EzyCGMigrator";
+    private const string AssetName = "EzyCGMigrator-win-x64.zip";
+    private const string ExecutableName = "EzyCGMigrator.exe";
     private const string ApplyArgument = "--apply-update";
     private const string CleanupArgument = "--cleanup-update";
     private static readonly string UpdateBase = Path.Combine(
-        Path.GetTempPath(), "GraphicsSettingsMigrator", "updates");
+        Path.GetTempPath(), "EzyCGMigrator", "updates");
     private static readonly HttpClient Client = CreateClient();
 
     public static Version CurrentVersion =>
@@ -84,7 +84,7 @@ internal static class UpdateService
         var currentExecutable = Environment.ProcessPath
             ?? throw new InvalidOperationException("The current executable path is unavailable.");
         if (!Path.GetFileNameWithoutExtension(currentExecutable)
-                .Equals("GraphicsSettingsMigrator", StringComparison.OrdinalIgnoreCase))
+                .Equals("EzyCGMigrator", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
                 "Self-update is available only in the published portable application, not under dotnet or an IDE.");
 
@@ -175,7 +175,7 @@ internal static class UpdateService
         catch (Exception ex)
         {
             MessageBox.Show("The update could not be installed.\n\n" + ex.Message,
-                "Graphics Settings Migrator updater", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Ezy CG Migrator updater", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         return true;
     }
@@ -263,7 +263,7 @@ internal static class UpdateService
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
             !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
             !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
-            !uri.AbsolutePath.Contains("/Ezypoly/GraphicsSettingsMigrator/", StringComparison.OrdinalIgnoreCase) ||
+            !uri.AbsolutePath.Contains("/Ezypoly/EzyCGMigrator/", StringComparison.OrdinalIgnoreCase) ||
             !uri.AbsolutePath.Contains(requiredPathPart, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("GitHub returned an unexpected release URL.");
         return uri;
@@ -346,7 +346,7 @@ internal static class UpdateService
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(
-            "GraphicsSettingsMigrator", CurrentVersionText));
+            "EzyCGMigrator", CurrentVersionText));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
         return client;

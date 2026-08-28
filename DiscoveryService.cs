@@ -27,6 +27,8 @@ public sealed class DiscoveryService
         ExtendedDiscovery.AddExisting(result, MakePortablePath);
         CustomContentDiscovery.AddExisting(result, MakePortablePath);
         PluginDiscovery.AddExisting(result, MakePortablePath);
+        if (UserOptions.Load().IncludeUnclassifiedProfileData)
+            UnclassifiedDiscovery.AddExisting(result, MakePortablePath);
         return result
             .GroupBy(x => x.Kind + "|" + x.SourcePath, StringComparer.OrdinalIgnoreCase)
             .Select(x => x.First())

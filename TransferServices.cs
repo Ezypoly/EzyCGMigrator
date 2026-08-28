@@ -246,7 +246,7 @@ public sealed class RestoreService
         if (selections.Count == 0) throw new InvalidOperationException("No settings sets selected for restore.");
         var rollbackRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "GraphicsSettingsMigrator Rollbacks",
+            "EzyCGMigrator Rollbacks",
             DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture));
         Directory.CreateDirectory(rollbackRoot);
 

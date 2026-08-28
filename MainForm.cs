@@ -39,6 +39,11 @@ public sealed class MainForm : Form
         ThousandsSeparator = true,
         Width = 90
     };
+    private readonly CheckBox _includeUnclassified = new()
+    {
+        Text = "Show unclassified profile data (experimental; manual selection only)",
+        AutoSize = true
+    };
     private readonly CheckBox _overwrite = new()
     {
         Text = "Overwrite existing files (with rollback copy)",
@@ -47,13 +52,14 @@ public sealed class MainForm : Form
     };
     private BackupManifest? _loadedManifest;
     internal event EventHandler? AutoSelectLimitUpdated;
+    internal event EventHandler? DiscoveryOptionsUpdated;
     internal int AutoSelectFolderLimitMb => _options.AutoSelectFolderLimitMb;
     internal long AutoSelectFolderLimitBytes => _options.AutoSelectFolderLimitBytes;
 
 
     public MainForm()
     {
-        Text = "Graphics Settings Migrator " + UpdateService.CurrentVersionText;
+        Text = "Ezy CG Migrator " + UpdateService.CurrentVersionText;
         Width = 1220;
         Height = 790;
         MinimumSize = new Size(900, 600);
@@ -65,13 +71,14 @@ public sealed class MainForm : Form
             StringComparison.OrdinalIgnoreCase) ? DarkTheme.ClassicName : DarkTheme.ConsoleName;
         _backupDestination.Text = string.IsNullOrWhiteSpace(preferences.BackupDestination)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "GraphicsSettingsBackups")
+                "Ezy CG Migrator Saved Copies")
             : preferences.BackupDestination;
         _packagePath.Text = preferences.RestorePackagePath;
         _backupDestination.PlaceholderText = "Library folder containing multiple saved copies";
         _packagePath.PlaceholderText = "One saved-copy folder containing manifest.json";
         _overwrite.Checked = preferences.OverwriteExistingFiles;
         _autoSelectLimit.Value = _options.AutoSelectFolderLimitMb;
+        _includeUnclassified.Checked = _options.IncludeUnclassifiedProfileData;
         ConfigureBackupGrid();
         ConfigureRestoreGrid();
         ConfigureMultiRowSelection(_backupGrid);
@@ -92,6 +99,7 @@ public sealed class MainForm : Form
         _toggleRestoreButton.Click += (_, _) => ToggleAll(_restoreGrid);
         Shown += async (_, _) => await ScanAsync();
         _autoSelectLimit.ValueChanged += (_, _) => AutoSelectLimitChanged();
+        _includeUnclassified.CheckedChanged += async (_, _) => await UnclassifiedOptionChangedAsync();
         _backupDestination.TextChanged += (_, _) => SavePathPreferences();
         _packagePath.TextChanged += (_, _) => SavePathPreferences();
         _overwrite.CheckedChanged += (_, _) => SavePathPreferences();
@@ -169,13 +177,16 @@ public sealed class MainForm : Form
         sizeRow.Controls.Add(new Label { Text = "MB (0 = unlimited)", AutoSize = true,
             Padding = new Padding(0, 7, 0, 0) });
         settings.Controls.Add(sizeRow, 1, 1);
+        settings.Controls.Add(new Label { Text = "Experimental", AutoSize = true,
+            Padding = new Padding(0, 7, 18, 10) }, 0, 2);
+        settings.Controls.Add(_includeUnclassified, 1, 2);
         settings.Controls.Add(new Label { Text = "Application updates", AutoSize = true,
-            Padding = new Padding(0, 7, 18, 0) }, 0, 2);
+            Padding = new Padding(0, 7, 18, 0) }, 0, 3);
         var updateRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
         updateRow.Controls.Add(new Label { Text = "Version " + UpdateService.CurrentVersionText,
             AutoSize = true, Padding = new Padding(0, 7, 8, 0) });
         updateRow.Controls.Add(_updateButton);
-        settings.Controls.Add(updateRow, 1, 2);
+        settings.Controls.Add(updateRow, 1, 3);
         layout.Controls.Add(settings, 0, 1);
         page.Controls.Add(layout);
         return page;
@@ -362,7 +373,7 @@ public sealed class MainForm : Form
         if (selected.Count > 12) summary += "\n• ...and " + (selected.Count - 12) + " more";
         var recoveryRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "GraphicsSettingsMigrator Removed Settings");
+            "EzyCGMigrator Removed Settings");
         var answer = MessageBox.Show(this,
             "Permanently remove " + selected.Count + " highlighted settings set(s) from this PC?\n\n" +
             summary + "\n\nA recovery copy will be saved first in:\n" + recoveryRoot +
@@ -502,7 +513,7 @@ public sealed class MainForm : Form
         var question = "Copy " + preview.FilesToCopy + " files/entries (" +
             FormatBytes(preview.BytesToCopy) + ")?\n\n" +
             "Existing files will be saved before replacement in Documents\\" +
-            "GraphicsSettingsMigrator Rollbacks.\nNo extra files will be deleted from the target.";
+            "EzyCGMigrator Rollbacks.\nNo extra files will be deleted from the target.";
         if (preview.Warnings.Count > 0)
             question += "\n\nWarning: cross-version migration is selected. Presets are generally portable, " +
                         "but binary preference files may be incompatible.";
@@ -539,7 +550,7 @@ public sealed class MainForm : Form
 
             var update = result.Update!;
             var answer = MessageBox.Show(this,
-                "Graphics Settings Migrator " + UpdateService.CurrentVersionText +
+                "Ezy CG Migrator " + UpdateService.CurrentVersionText +
                 " can be updated to " + update.Version.ToString(3) + ".\n\n" +
                 "Download: " + FormatBytes(update.SizeBytes) +
                 "\nSource: GitHub Releases\nIntegrity: GitHub SHA-256 digest\n\n" +
@@ -618,6 +629,7 @@ public sealed class MainForm : Form
         _removeButton.Enabled = !busy;
         _backupButton.Enabled = !busy;
         _autoSelectLimit.Enabled = !busy;
+        _includeUnclassified.Enabled = !busy;
         _loadButton.Enabled = !busy;
         _toggleBackupButton.Enabled = !busy;
         _toggleRestoreButton.Enabled = !busy;
@@ -720,7 +732,8 @@ public sealed class MainForm : Form
 
         foreach (DataGridViewRow row in _backupGrid.Rows)
         {
-            if (row.Tag is not SettingsLocation location || IsCacheSet(location.Category, location.Notes))
+            if (row.Tag is not SettingsLocation location || IsCacheSet(location.Category, location.Notes) ||
+                UnclassifiedDiscovery.IsCategory(location.Category))
                 continue;
             row.Cells["Selected"].Value = ShouldAutoSelect(location);
             row.Cells["Notes"].Value = DisplayNotes(location);
@@ -728,7 +741,8 @@ public sealed class MainForm : Form
         }
         foreach (DataGridViewRow row in _restoreGrid.Rows)
         {
-            if (row.Tag is not BackupEntry entry || IsCacheSet(entry.Category, entry.Notes)) continue;
+            if (row.Tag is not BackupEntry entry || IsCacheSet(entry.Category, entry.Notes) ||
+                UnclassifiedDiscovery.IsCategory(entry.Category)) continue;
             row.Cells["Selected"].Value = ShouldAutoSelect(entry);
         }
         _backupGrid.Invalidate();
@@ -736,17 +750,31 @@ public sealed class MainForm : Form
         AutoSelectLimitUpdated?.Invoke(this, EventArgs.Empty);
     }
 
+    private async Task UnclassifiedOptionChangedAsync()
+    {
+        _options.IncludeUnclassifiedProfileData = _includeUnclassified.Checked;
+        try { _options.Save(); }
+        catch (Exception ex)
+        {
+            Log(_backupLog, "Could not save the experimental discovery option: " + ex.Message);
+        }
+        await ScanAsync();
+        DiscoveryOptionsUpdated?.Invoke(this, EventArgs.Empty);
+    }
+
     private bool ShouldAutoSelect(SettingsLocation location) =>
-        location.Recommended && !IsCacheSet(location.Category, location.Notes) &&
+        location.Recommended && !UnclassifiedDiscovery.IsCategory(location.Category) &&
+        !IsCacheSet(location.Category, location.Notes) &&
         !IsOverAutoSelectLimit(location.Kind, location.SizeBytes);
 
     private bool ShouldAutoSelect(BackupEntry entry) =>
+        !UnclassifiedDiscovery.IsCategory(entry.Category) &&
         !IsCacheSet(entry.Category, entry.Notes) &&
         !IsOverAutoSelectLimit(entry.Kind, entry.SizeBytes);
 
     private bool IsAutomaticallySelectableRow(DataGridViewRow row)
     {
-        if (IsCacheRow(row)) return false;
+        if (IsCacheRow(row) || IsManualOnlyRow(row)) return false;
         return row.Tag switch
         {
             SettingsLocation location => !IsOverAutoSelectLimit(location.Kind, location.SizeBytes),
@@ -777,6 +805,13 @@ public sealed class MainForm : Form
     private static bool IsCacheSet(string category, string notes) =>
         category.Contains("cache", StringComparison.OrdinalIgnoreCase) ||
         notes.Contains("cache", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsManualOnlyRow(DataGridViewRow row) => row.Tag switch
+    {
+        SettingsLocation location => UnclassifiedDiscovery.IsCategory(location.Category),
+        BackupEntry entry => UnclassifiedDiscovery.IsCategory(entry.Category),
+        _ => false
+    };
 
     private static bool IsSelected(DataGridViewRow row) =>
         row.Cells["Selected"].Value is true ||
