@@ -28,7 +28,7 @@ jobs:
       - name: Package release
         shell: pwsh
         run: |
-          Copy-Item README.md, SUPPORTED_APPS.md -Destination dist/portable
+          Copy-Item README.md, RECOVERY.md, SUPPORTED_APPS.md -Destination dist/portable
           Compress-Archive -Path dist/portable/* -DestinationPath dist/EzyCGMigrator-win-x64.zip -Force
 
       - name: Publish GitHub release

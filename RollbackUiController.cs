@@ -32,6 +32,7 @@ internal sealed class RollbackUiController
         ScrollBars = ScrollBars.Vertical, Font = new Font("Consolas", 8.5F)
     };
     private readonly Button _refresh = new() { Text = "Refresh", AutoSize = true };
+    private readonly Button _guide = new() { Text = "Recovery guide", AutoSize = true };
     private readonly Button _open = new() { Text = "Open folder", AutoSize = true };
     private readonly Button _revert = new() { Text = "Revert selected restore", AutoSize = true };
 
@@ -46,6 +47,7 @@ internal sealed class RollbackUiController
         if (settingsIndex >= 0) tabs.TabPages.Insert(settingsIndex, page);
         else tabs.TabPages.Add(page);
         _refresh.Click += (_, _) => RefreshList();
+        _guide.Click += (_, _) => OpenRecoveryGuide();
         _open.Click += (_, _) => OpenSelected();
         _revert.Click += async (_, _) => await RevertSelectedAsync();
         RefreshList();
@@ -75,6 +77,7 @@ internal sealed class RollbackUiController
             Padding = new Padding(0, 6, 0, 6)
         };
         actions.Controls.Add(_refresh);
+        actions.Controls.Add(_guide);
         actions.Controls.Add(_open);
         actions.Controls.Add(_revert);
         layout.Controls.Add(actions, 0, 1);
@@ -102,6 +105,23 @@ internal sealed class RollbackUiController
     {
         if (_list.SelectedItem is not RollbackPackage package) return;
         Process.Start(new ProcessStartInfo("explorer.exe", package.FolderPath) { UseShellExecute = true });
+    }
+
+    private void OpenRecoveryGuide()
+    {
+        try
+        {
+            var localGuide = Path.Combine(AppContext.BaseDirectory, "RECOVERY.md");
+            var target = File.Exists(localGuide)
+                ? localGuide
+                : "https://github.com/Ezypoly/EzyCGMigrator/blob/main/RECOVERY.md";
+            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(_form, "Could not open the recovery guide.\n\n" + ex.Message,
+                "Recovery guide", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private async Task RevertSelectedAsync()
@@ -155,6 +175,7 @@ internal sealed class RollbackUiController
     {
         _form.UseWaitCursor = busy;
         _refresh.Enabled = !busy;
+        _guide.Enabled = !busy;
         _open.Enabled = !busy;
         _revert.Enabled = !busy;
     }
