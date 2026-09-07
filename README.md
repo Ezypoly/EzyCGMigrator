@@ -6,6 +6,9 @@
 > settings, files, plug-ins, licenses, work time, or other losses. Keep an independent
 > copy of important data and test restores before relying on this tool.
 
+**If a restore or removal went wrong, stop the affected application and follow the
+[Recovery and rollback guide](RECOVERY.md) before changing any more files.**
+
 Portable Windows utility for CG artists and studios. It saves application settings
 to an ordinary folder, moves them between PCs or software versions, updates existing
 saved copies, and can roll back a restore.
@@ -39,7 +42,9 @@ See [SUPPORTED_APPS.md](SUPPORTED_APPS.md) for exact locations and scope notes.
 3. Move that folder to the other PC if required.
 4. In **Open / restore**, open the folder containing `manifest.json`.
 5. Review the proposed target paths, use **Preview**, then restore.
-6. Use **Rollback** if you need to undo that restore.
+6. Use **Rollback** if you need to undo that restore. See the
+   [recovery guide](RECOVERY.md) for interrupted restores, skipped files, manual
+   recovery, and recovery after **Remove selected**.
 
 **Update saved copy** refreshes selected sets and adds newly discovered ones. Unchanged
 sets are skipped using SHA-256 comparison. **Remove selected** creates a recovery copy
